@@ -30,12 +30,15 @@ const { CookieJar } = require("tough-cookie");
 
 const got = require("got");
 const get = got.extend({
-	prefixUrl: config.apiHost,
 	headers: {
-		Authorization: config.apiToken ? "Bearer " + config.apiToken : ""
+		Authorization: config.apiToken ? "Bearer " + config.apiToken : "",
 	},
+	prefixUrl: config.apiHost,
 });
 
+/**
+ * Launch the relay.
+ */
 async function launch() {
 	const form = new FormData();
 	form.append("user", config.credentials.username);
@@ -65,14 +68,16 @@ async function launch() {
 			if (message.sender.nickname === self.nickname) return;
 
 			get({
-				method: "POST",
-				url: "api/message",
 				json: {
 					gateway: config.apiGateway,
 					text: message.message,
 					username: message.sender.nickname,
 				},
-			}).catch(() => {});
+				method: "POST",
+				url: "api/message",
+			}).catch(() => {
+				// It's ok if this fails
+			});
 		};
 		sb.addChannelHandler("handler", handler);
 
@@ -82,14 +87,18 @@ async function launch() {
 			setInterval(async () => {
 				try {
 					const msgRes = await get({
-						url: "api/messages",
 						responseType: "json",
+						url: "api/messages",
 					});
 					msgRes.body.forEach(message => {
 						if (message.event != "" || message.gateway !== config.apiGateway) return;
-						channel.sendUserMessage(message.username + message.text, () => {});
-					})
-				} catch {}
+						channel.sendUserMessage(message.username + message.text, () => {
+							// Required callback
+						});
+					});
+				} catch (error) {
+					// It's ok if this fails
+				}
 			}, 500);
 		});
 	});
