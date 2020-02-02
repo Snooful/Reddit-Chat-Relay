@@ -29,7 +29,7 @@ const FormData = require("form-data");
 const { CookieJar } = require("tough-cookie");
 
 const got = require("got");
-const get = got.extend({
+const matterbridgeGot = got.extend({
 	headers: {
 		Authorization: config.apiToken ? "Bearer " + config.apiToken : "",
 	},
@@ -68,15 +68,15 @@ async function launch() {
 
 	const res = await got.post({
 		body: form,
+		responseType: "json",
 		url: "https://ssl.reddit.com/api/login",
 	});
 
 	const cookieJar = new CookieJar();
-	cookieJar.setCookieSync("reddit_session=" + encodeURIComponent(JSON.parse(res.body).json.data.cookie), "https://s.reddit.com");
+	cookieJar.setCookieSync("reddit_session=" + encodeURIComponent(res.body.json.data.cookie), "https://s.reddit.com");
 
 	const sbRes = await got({
 		cookieJar,
-		method: "get",
 		url: "https://s.reddit.com/api/v1/sendbird/me",
 	});
 	const sbInfo = JSON.parse(sbRes.body);
@@ -90,13 +90,12 @@ async function launch() {
 
 			const prefix = getSnoomojiURL(message);
 
-			get({
+			matterbridgeGot.post({
 				json: {
 					gateway: config.apiGateway,
 					text: prefix + message.message,
 					username: message.sender.nickname,
 				},
-				method: "POST",
 				url: "api/message",
 			}).catch(() => {
 				// It's ok if this fails
@@ -109,7 +108,7 @@ async function launch() {
 
 			setInterval(async () => {
 				try {
-					const msgRes = await get({
+					const msgRes = await matterbridgeGot({
 						responseType: "json",
 						url: "api/messages",
 					});
