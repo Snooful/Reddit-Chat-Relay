@@ -13,6 +13,9 @@ const explorer = cosmic.cosmiconfigSync("redditchatrelay", {
 });
 const config = explorer.search().config;
 
+const debug = require("debug");
+const log = debug("reddit-chat-relay:main");
+
 const { version } = require("../package.json");
 
 const Snoowrap = require("snoowrap");
@@ -61,6 +64,8 @@ function getSnoomojiURL(message) {
  * Launch the relay.
  */
 async function launch() {
+	log("launching reddit chat relay");
+
 	const form = new FormData();
 	form.append("user", config.credentials.username);
 	form.append("passwd", config.credentials.password);
@@ -71,6 +76,19 @@ async function launch() {
 		responseType: "json",
 		url: "https://ssl.reddit.com/api/login",
 	});
+
+	if (res.body.json.errors.length > 0) {
+		const errors = res.body.json.errors.map(error => error[0]);
+		if (errors.includes("RATELIMIT")) {
+			return log("could not authenticate due to ratelimit being reached");
+		} else if (errors.includes("INCORRECT_USERNAME_PASSWORD")) {
+			return log("could not authenticate due to incorrect username/password combination");
+		} else if (errors.includes("WRONG_PASSWORD")) {
+			return log("could not authenticate due to incorrect password");
+		} else {
+			return log("could not authenticate for reason: '%s'", errors[0]);
+		}
+	}
 
 	const cookieJar = new CookieJar();
 	cookieJar.setCookieSync("reddit_session=" + encodeURIComponent(res.body.json.data.cookie), "https://s.reddit.com");

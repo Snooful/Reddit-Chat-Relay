@@ -12,6 +12,7 @@
 	],
 	"dependencies": {
 		"cosmiconfig": "^6.0.0",
+		"debug": "^4.1.1",
 		"form-data": "^3.0.0",
 		"got": "^10.2.2",
 		"sendbird": "^3.0.117",
